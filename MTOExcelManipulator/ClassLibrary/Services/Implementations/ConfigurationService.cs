@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using ClassLibrary.Classes;
+using Microsoft.Extensions.Configuration;
 using System.IO;
 
 public class ConfigurationService
@@ -12,6 +13,14 @@ public class ConfigurationService
             .AddJsonFile(configFileName, optional: false, reloadOnChange: true);
 
         _configuration = builder.Build();
+    }
+
+    public ShopifyAdminAPISettings GetShopifySettings()
+    {
+        string environment = GetValue("Environment");
+        string sectionName = environment == "Production" ? "ShopifySettings" : "DevShopifySettings";
+
+        return GetSection<ShopifyAdminAPISettings>(sectionName);
     }
 
     public T GetSection<T>(string sectionName) where T : new()
