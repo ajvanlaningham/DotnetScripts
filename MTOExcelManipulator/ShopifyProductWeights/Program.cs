@@ -20,8 +20,7 @@ namespace ShopifyProductWeights
             //learn sumthin' new every day! LINQ to the rescue
             // Filter only non-archived products (Status should be "active" or "draft")
             var nonArchivedProducts = products
-                .Where(p => p.Status.Equals("active", StringComparison.OrdinalIgnoreCase) ||
-                            p.Status.Equals("draft", StringComparison.OrdinalIgnoreCase))
+                .Where(p => p.Status.Equals("active", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             Console.WriteLine($"Filtered {nonArchivedProducts.Count} non-archived products.");
