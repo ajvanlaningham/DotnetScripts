@@ -4,7 +4,7 @@ using ClassLibrary.Services.Interfaces;
 using GraphQL.Client.Abstractions;
 using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.Newtonsoft;
-using static ClassLibrary.Classes.GQLObjects.OrdersByCustomerResponse;
+using static OrdersByCustomerResponse;
 
 namespace ClassLibrary.Services.Implementations
 {

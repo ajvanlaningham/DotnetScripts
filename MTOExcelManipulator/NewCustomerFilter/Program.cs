@@ -1,6 +1,5 @@
 ﻿using ClassLibrary.Classes;
 using ClassLibrary.Services.Implementations;
-using NewCustomerFilter;
 
 internal class Program
 {

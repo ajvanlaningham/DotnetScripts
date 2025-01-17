@@ -1,9 +1,7 @@
-﻿namespace ClassLibrary.Services.Interfaces
-{
-    using System.Collections.Generic;
-    using System.Threading.Tasks;
-    using static ClassLibrary.Classes.GQLObjects.OrdersByCustomerResponse;
+﻿using static OrdersByCustomerResponse;
 
+namespace ClassLibrary.Services.Interfaces
+{
     public interface ICustomOrderService
     {
         Task<List<OrderDetail>> GetOrdersByCustomerIdAsync(string customerGid);

@@ -177,7 +177,6 @@ namespace ClassLibrary.Services.Implementations
             return response.Data?.CustomerUpdate?.UserErrors?.Count == 0;
         }
 
-
         private static string EnsureProtocol(string url)
         {
             if (!url.StartsWith("http://") && !url.StartsWith("https://"))

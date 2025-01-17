@@ -1,20 +1,19 @@
 ﻿using ClassLibrary.Classes;
-using ClassLibrary.Services.Implementations;
+using ClassLibrary.Classes.GQLObjects;
 using ClassLibrary.Services.Interfaces;
+using GraphQL.Client.Abstractions;
+using GraphQL.Client.Http;
+using GraphQL.Client.Serializer.Newtonsoft;
 using ShopifySharp;
 using ShopifySharp.Filters;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace ClassLibrary.Services.Implemetations
+namespace ClassLibrary.Services.Implementations
 {
     public class CustomProductService : ICustomProductService
     {
         private readonly ProductService _service;
         private readonly RateLimiter _limiter;
+        private readonly IGraphQLClient _client;
 
         public CustomProductService(ProductService service, RateLimiter limiter)
         {
@@ -26,14 +25,35 @@ namespace ClassLibrary.Services.Implemetations
         {
             _service = new ProductService(settings.StoreUrl, settings.AccessToken);
             _limiter = new RateLimiter(4, TimeSpan.FromSeconds(10));
+
+            var endpoint = new Uri($"{EnsureProtocol(settings.StoreUrl)}/admin/api/2025-01/graphql.json");
+
+            var options = new GraphQLHttpClientOptions
+            {
+                EndPoint = endpoint
+            };
+
+            var graphQLClient = new GraphQLHttpClient(options, new NewtonsoftJsonSerializer());
+            graphQLClient.HttpClient.DefaultRequestHeaders.Add("X-Shopify-Access-Token", settings.AccessToken);
+
+            _client = graphQLClient;
         }
 
-        public async Task<List<Product>> FetchAllProductsAsync()
+        public List<string> TagList(ShopifySharp.Product product)
         {
-            var productList = new List<Product>();
+            return string.IsNullOrWhiteSpace(product.Tags)
+                ? new List<string>()
+                : product.Tags.Split(',')
+                              .Select(tag => tag.Trim())
+                              .ToList();
+        }
+
+        public async Task<List<ShopifySharp.Product>> FetchAllProductsAsync()
+        {
+            var productList = new List<ShopifySharp.Product>();
             long? lastId = 0;
 
-            while (lastId >= 0)
+            while (lastId.HasValue)
             {
                 await _limiter.PerformAsync(async () =>
                 {
@@ -65,39 +85,152 @@ namespace ClassLibrary.Services.Implemetations
             {
                 await _limiter.PerformAsync(async () =>
                 {
-                    await _service.UpdateAsync(productId, new Product
-                    {
-                        Status = "archived"
-                    });
+                    await _service.UpdateAsync(productId, new ShopifySharp.Product { Status = "archived" });
                     Console.WriteLine($"Archived product with ID: {productId}");
                 });
             }
         }
 
-        public async Task CreateProductsAsync(List<Product> products)
+        public async Task CreateProductsAsync(List<ShopifySharp.Product> products)
         {
             foreach (var product in products)
             {
                 await _limiter.PerformAsync(async () =>
                 {
                     await _service.CreateAsync(product);
-
-                    Console.WriteLine($"Created Product: {product.Variants.FirstOrDefault().SKU}");
+                    Console.WriteLine($"Created Product: {product.Variants.FirstOrDefault()?.SKU}");
                 });
             }
         }
 
-        public async Task UpdateProductsTagsAsync(List<Product> products)
+        public async Task UpdateProductsTagsAsync(List<ShopifySharp.Product> products)
         {
+            int count = products.Count();
             foreach (var product in products)
             {
-                await _limiter.PerformAsync(async () =>
-                {
-                    await _service.UpdateAsync(product.Id.Value, product);
+                Console.WriteLine(count--);
+                string mutation = @"
+            mutation UpdateProductTags($input: ProductInput!) {
+                productUpdate(input: $input) {
+                    product {
+                        id
+                        tags
+                    }
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }";
 
-                    Console.WriteLine($"Created Product: {product.Variants.FirstOrDefault().SKU}");
-                });
+                var variables = new
+                {
+                    input = new
+                    {
+                        id = $"gid://shopify/Product/{product.Id}",
+                        tags = product.Tags
+                    }
+                };
+
+                var request = new GraphQLHttpRequest
+                {
+                    Query = mutation,
+                    Variables = variables
+                };
+
+                bool retry;
+                do
+                {
+                    retry = false;
+
+                    var response = await _client.SendMutationAsync<dynamic>(request);
+
+                    // Check for errors in the mutation response
+                    if (response.Errors != null && response.Errors.Any())
+                    {
+                        throw new Exception($"GraphQL Error: {string.Join(", ", response.Errors.Select(e => e.Message))}");
+                    }
+
+                    // Extract cost information from the extensions field
+                    var extensionsDict = response.Extensions as IDictionary<string, object>;
+                    if (extensionsDict != null && extensionsDict.ContainsKey("cost"))
+                    {
+                        // Convert the "cost" object to a dictionary
+                        var costDict = extensionsDict["cost"] as IDictionary<string, object>;
+                        var throttleStatusDict = costDict["throttleStatus"] as IDictionary<string, object>;
+
+                        int requestedQueryCost = Convert.ToInt32(costDict["requestedQueryCost"]);
+                        int availableBudget = Convert.ToInt32(throttleStatusDict["currentlyAvailable"]);
+
+                        // Check if the cost exceeds the available budget
+                        if (requestedQueryCost > availableBudget)
+                        {
+                            retry = true;
+                            await Task.Delay(1000); // Wait for 1 second
+                        }
+                    }
+                } while (retry);
             }
+        }
+
+
+        public async Task<List<Classes.GQLObjects.Product>> FindProductsBySkuAsync(string sku)
+        {
+            string query = @"
+                query($sku: String!) {
+                    products(first: 50, query: $sku) {
+                        edges {
+                            node {
+                                id
+                                tags
+                                title
+                                variants(first: 50) {
+                                    edges {
+                                        node {
+                                            id
+                                            sku
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }";
+
+            var variables = new { sku = $"sku:{sku}" };
+
+            var response = await _client.SendQueryAsync<ProductsBySkuResponse>(query, variables);
+
+            if (response.Errors != null && response.Errors.Any())
+            {
+                throw new Exception("GraphQL query failed: " + string.Join(", ", response.Errors.Select(e => e.Message)));
+            }
+
+            return response.Data.Products.Edges
+                .Where(edge => edge.Node.Variants.Edges.Any(variantEdge => variantEdge.Node.Sku.Contains(sku, StringComparison.OrdinalIgnoreCase)))
+                .Select(edge => new Classes.GQLObjects.Product
+                {
+                    Id = edge.Node.Id,
+                    Title = edge.Node.Title,
+                    Tags = edge.Node.Tags,
+                    Variants = edge.Node.Variants.Edges
+                        .Select(variantEdge => new Classes.GQLObjects.ProductVariant
+                        {
+                            Id = variantEdge.Node.Id,
+                            Sku = variantEdge.Node.Sku
+                        })
+                        .ToList()
+                })
+                .ToList();
+        }
+
+        private static string EnsureProtocol(string url)
+        {
+            if (!url.StartsWith("http://") && !url.StartsWith("https://"))
+            {
+                return $"https://{url}";
+            }
+            return url;
         }
     }
 }
