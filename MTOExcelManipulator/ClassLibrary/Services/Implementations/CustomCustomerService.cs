@@ -1,4 +1,5 @@
 ﻿using ClassLibrary.Classes;
+using ClassLibrary.Classes.GQLObjects;
 using ClassLibrary.Services.Interfaces;
 using GraphQL;
 using GraphQL.Client.Abstractions;
@@ -7,6 +8,7 @@ using GraphQL.Client.Serializer.Newtonsoft;
 using ShopifySharp;
 using ShopifySharp.Filters;
 using System;
+using System.Text.Json;
 
 
 namespace ClassLibrary.Services.Implementations
@@ -53,36 +55,75 @@ namespace ClassLibrary.Services.Implementations
             });
         }
 
-        public async Task<List<ShopifySharp.Customer>> FetchAllCustomersAsync()
+        public async Task<List<CustomerFetch>> FetchAllCustomersAsync()
         {
-            var customerList = new List<ShopifySharp.Customer>();
-            long? lastId = 0;
+            var customerList = new List<CustomerFetch>();
+            string? cursor = null; // Pagination cursor
+            const string query = @"
+        query ($cursor: String) {
+            customers(first: 250, after: $cursor) {
+                edges {
+                    cursor
+                    node {
+                        id
+                        email
+                        firstName
+                        lastName
+                        phone
+                        createdAt
+                        updatedAt
+                        tags
+                        addresses {
+                            address1
+                            address2
+                            city
+                            province
+                            country
+                            zip
+                        }
+                    }
+                }
+                pageInfo {
+                    hasNextPage
+                }
+            }
+        }
+    ";
 
-            while (lastId >= 0)
+            bool hasNextPage = true;
+
+            while (hasNextPage)
             {
-                await _limiter.PerformAsync(async () =>
-                {
-                    var filter = new CustomerListFilter
-                    {
-                        SinceId = lastId,
-                        Limit = 250
-                    };
+                var variables = new { cursor };
+                var response = await _graphQLClient.SendQueryAsync(query, variables);
 
-                    var tempProductList = await _service.ListAsync(filter);
-                    if (tempProductList != null && tempProductList.Items.Any())
+                if (response != null && response.Data != null)
+                {
+                    var customersData = JsonSerializer.Deserialize<GraphQLFetchCustomersResponse>(response.Data.ToString());
+
+                    if (customersData?.Customers != null)
                     {
-                        customerList.AddRange(tempProductList.Items);
-                        lastId = tempProductList.Items.Last().Id;
+                        foreach (var edge in customersData.Customers.Edges)
+                        {
+                            customerList.Add(edge.Node);
+                            cursor = edge.Cursor;
+                        }
+
+                        hasNextPage = customersData.Customers.PageInfo.HasNextPage;
                     }
                     else
                     {
-                        lastId = null;
+                        hasNextPage = false;
                     }
-                });
+                }
+                else
+                {
+                    throw new Exception("Failed to fetch customers from shopify");
+                }
+                return customerList;
             }
-
-            return customerList;
         }
+    
 
         public async Task<Classes.GQLObjects.Customer> GetCustomerByIdAsync(string customerId)
         {

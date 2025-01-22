@@ -81,13 +81,69 @@ namespace ClassLibrary.Services.Implementations
 
         public async Task ArchiveProductsAsync(IEnumerable<long> productIds)
         {
+            int count = productIds.Count();
             foreach (var productId in productIds)
             {
-                await _limiter.PerformAsync(async () =>
+                Console.WriteLine($"Archiving product {count--}");
+
+                string mutation = @"
+        mutation ArchiveProduct($input: ProductInput!) {
+            productUpdate(input: $input) {
+                product {
+                    id
+                    status
+                }
+                userErrors {
+                    field
+                    message
+                }
+            }
+        }";
+
+                var variables = new
                 {
-                    await _service.UpdateAsync(productId, new ShopifySharp.Product { Status = "archived" });
-                    Console.WriteLine($"Archived product with ID: {productId}");
-                });
+                    input = new
+                    {
+                        id = $"gid://shopify/Product/{productId}",
+                        status = "ARCHIVED"
+                    }
+                };
+
+                var request = new GraphQLHttpRequest
+                {
+                    Query = mutation,
+                    Variables = variables
+                };
+
+                bool retry;
+                do
+                {
+                    retry = false;
+
+                    var response = await _client.SendMutationAsync<dynamic>(request);
+
+                    if (response.Errors != null && response.Errors.Any())
+                    {
+                        throw new Exception($"GraphQL Error: {string.Join(", ", response.Errors.Select(e => e.Message))}");
+                    }
+
+                    var extensionsDict = response.Extensions as IDictionary<string, object>;
+                    if (extensionsDict != null && extensionsDict.ContainsKey("cost"))
+                    {
+                        var costDict = extensionsDict["cost"] as IDictionary<string, object>;
+                        var throttleStatusDict = costDict["throttleStatus"] as IDictionary<string, object>;
+
+                        int requestedQueryCost = Convert.ToInt32(costDict["requestedQueryCost"]);
+                        int availableBudget = Convert.ToInt32(throttleStatusDict["currentlyAvailable"]);
+
+                        if (requestedQueryCost > availableBudget)
+                        {
+                            retry = true;
+                            Console.WriteLine("Throttling detected. Retrying in 1 second...");
+                            await Task.Delay(1000);
+                        }
+                    }
+                } while (retry);
             }
         }
 

@@ -1,4 +1,5 @@
-﻿using ShopifySharp;
+﻿using ClassLibrary.Classes.GQLObjects;
+using ShopifySharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,12 +16,12 @@ namespace ClassLibrary.Services.Interfaces
         /// <param name="cust">The customer to update.</param>
         /// <param name="tag">The tag to add to the customer's existing tags.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        Task UpdateCustomerTagsAsync(Customer cust, string tag);
+        Task UpdateCustomerTagsAsync(ShopifySharp.Customer cust, string tag);
 
         /// <summary>
         /// Fetches all customers from the Shopify store.
         /// </summary>
         /// <returns>A list of all customers.</returns>
-        Task<List<Customer>> FetchAllCustomersAsync();
+        Task<List<CustomerFetch>> FetchAllCustomersAsync();
     }
 }
