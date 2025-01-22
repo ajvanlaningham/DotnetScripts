@@ -25,34 +25,34 @@ namespace AllCustomersByEmail
 
             foreach (CustomerFetch customer in customers)
             {
-                SalesforceCustomer sCustomer = MapCustomerToSalesforceCustomer(customer);
-                salesforceCustomers.Add(sCustomer);
+                //SalesforceCustomer sCustomer = MapCustomerToSalesforceCustomer(customer);
+                //salesforceCustomers.Add(sCustomer);
             }
             
             _excelWriterService.WriteExcelFile("", salesforceCustomers);
         }
 
-        private static SalesforceCustomer MapCustomerToSalesforceCustomer(CustomerFetch customer)
-        {
-            return new SalesforceCustomer()
-            {
-                ShopifyCustomerId = customer.Id,
-                FirstName = customer.FirstName?? "",
-                LastName = customer.LastName?? "",
-                Email = customer.Email?? "",
-                Phone = customer.Phone?? "",
-                AddressLine1 = customer.Addresses.FirstOrDefault().Address1?? "",
-                AddressLine2 = customer.Addresses.FirstOrDefault().Address2?? "",
-                City = customer.Addresses.FirstOrDefault().City?? "",
-                StateOrProvince = customer.Addresses.FirstOrDefault().Province?? "",
-                PostalCode = customer.Addresses.FirstOrDefault().ProvinceCode ?? "",
+        //private static SalesforceCustomer MapCustomerToSalesforceCustomer(CustomerFetch customer)
+        //{
+        //    return new SalesforceCustomer()
+        //    {
+        //        ShopifyCustomerId = customer.Id,
+        //        FirstName = customer.FirstName?? "",
+        //        LastName = customer.LastName?? "",
+        //        Email = customer.Email?? "",
+        //        Phone = customer.Phone?? "",
+        //        AddressLine1 = customer.Addresses.FirstOrDefault().Address1?? "",
+        //        AddressLine2 = customer.Addresses.FirstOrDefault().Address2?? "",
+        //        City = customer.Addresses.FirstOrDefault().City?? "",
+        //        StateOrProvince = customer.Addresses.FirstOrDefault().Province?? "",
+        //        PostalCode = customer.Addresses.FirstOrDefault().ProvinceCode ?? "",
 
-                Tags = customer.Tags?? "",
+        //        Tags = customer.Tags?? "",
 
-                Company = customer.Addresses.FirstOrDefault().Company ?? "",
-                Notes = customer.Note
-            };
-        }
+        //        Company = customer.Addresses.FirstOrDefault().Company ?? "",
+        //        Notes = customer.Note
+        //    };
+        //}
     }
 
     public class SalesforceCustomer
