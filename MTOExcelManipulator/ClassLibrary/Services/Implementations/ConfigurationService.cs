@@ -1,6 +1,5 @@
 ﻿using ClassLibrary.Classes;
 using Microsoft.Extensions.Configuration;
-using System.IO;
 
 public class ConfigurationService
 {
