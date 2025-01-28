@@ -17,7 +17,7 @@ namespace WhatWeMissed
                 ConfigurationService config = new ConfigurationService("appsettings.json");
                 _excelWriterService = new ExcelWriterService();
                 _prodService = new CustomProductService(config.GetShopifySettings());
-                string filePath = config.GetValue("FilePaths:StockExcelLocation");
+                string filePath = config.GetValue("FilePaths:PanelSkuReport");
                 string directoryPath = Path.GetDirectoryName(filePath);
 
                 if (!Directory.Exists(directoryPath))

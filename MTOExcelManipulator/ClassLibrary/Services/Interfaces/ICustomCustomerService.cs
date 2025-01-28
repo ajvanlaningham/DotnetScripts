@@ -22,6 +22,6 @@ namespace ClassLibrary.Services.Interfaces
         /// Fetches all customers from the Shopify store.
         /// </summary>
         /// <returns>A list of all customers.</returns>
-        Task<List<CustomerFetch>> FetchAllCustomersAsync();
+        //Task<List<CustomerFetch>> FetchAllCustomersAsync();
     }
 }

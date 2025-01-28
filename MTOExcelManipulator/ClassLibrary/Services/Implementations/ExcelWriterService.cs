@@ -55,5 +55,48 @@ namespace ClassLibrary.Services.Implementations
             var fi = new FileInfo(filePath);
             package.SaveAs(fi);
         }
+
+        public void WriteExcelFile(string filePath, List<Dictionary<string, object>> data, string sheetName = "Sheet1")
+        {
+            if (data == null || data.Count == 0)
+                throw new ArgumentException("Data cannot be null or empty.", nameof(data));
+
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            using var package = new ExcelPackage();
+
+            var worksheet = package.Workbook.Worksheets.Add(sheetName);
+
+            var headers = data.SelectMany(dict => dict.Keys).Distinct().ToList();
+
+            for (int col = 0; col < headers.Count; col++)
+            {
+                worksheet.Cells[1, col + 1].Value = headers[col];
+                worksheet.Cells[1, col + 1].Style.Font.Bold = true;
+            }
+
+            for (int row = 0; row < data.Count; row++)
+            {
+                var rowData = data[row];
+                for (int col = 0; col < headers.Count; col++)
+                {
+                    string header = headers[col];
+                    if (rowData.TryGetValue(header, out var value))
+                    {
+                        worksheet.Cells[row + 2, col + 1].Value = value;
+                    }
+                }
+            }
+
+            worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+
+            var directory = Path.GetDirectoryName(filePath);
+            if (!Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            var fileInfo = new FileInfo(filePath);
+            package.SaveAs(fileInfo);
+        }
     }
 }

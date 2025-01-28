@@ -55,73 +55,74 @@ namespace ClassLibrary.Services.Implementations
             });
         }
 
-        public async Task<List<CustomerFetch>> FetchAllCustomersAsync()
+        public async Task FetchAllCustomersAsync()
         {
-            var customerList = new List<CustomerFetch>();
-            string? cursor = null; // Pagination cursor
-            const string query = @"
-        query ($cursor: String) {
-            customers(first: 250, after: $cursor) {
-                edges {
-                    cursor
-                    node {
-                        id
-                        email
-                        firstName
-                        lastName
-                        phone
-                        createdAt
-                        updatedAt
-                        tags
-                        addresses {
-                            address1
-                            address2
-                            city
-                            province
-                            country
-                            zip
-                        }
-                    }
-                }
-                pageInfo {
-                    hasNextPage
-                }
-            }
-        }
-    ";
+            throw new NotImplementedException(); 
+    //        var customerList = new List<CustomerFetch>();
+    //        string? cursor = null; // Pagination cursor
+    //        const string query = @"
+    //    query ($cursor: String) {
+    //        customers(first: 250, after: $cursor) {
+    //            edges {
+    //                cursor
+    //                node {
+    //                    id
+    //                    email
+    //                    firstName
+    //                    lastName
+    //                    phone
+    //                    createdAt
+    //                    updatedAt
+    //                    tags
+    //                    addresses {
+    //                        address1
+    //                        address2
+    //                        city
+    //                        province
+    //                        country
+    //                        zip
+    //                    }
+    //                }
+    //            }
+    //            pageInfo {
+    //                hasNextPage
+    //            }
+    //        }
+    //    }
+    //";
 
-            bool hasNextPage = true;
+    //        bool hasNextPage = true;
 
-            while (hasNextPage)
-            {
-                var variables = new { cursor };
-                var response = await _graphQLClient.SendQueryAsync(query, variables);
+    //        while (hasNextPage)
+    //        {
+    //            var variables = new { cursor };
+    //            var response = await _graphQLClient.SendQueryAsync(query, variables);
 
-                if (response != null && response.Data != null)
-                {
-                    var customersData = JsonSerializer.Deserialize<GraphQLFetchCustomersResponse>(response.Data.ToString());
+    //            if (response != null && response.Data != null)
+    //            {
+    //                var customersData = JsonSerializer.Deserialize<GraphQLFetchCustomersResponse>(response.Data.ToString());
 
-                    if (customersData?.Customers != null)
-                    {
-                        foreach (var edge in customersData.Customers.Edges)
-                        {
-                            customerList.Add(edge.Node);
-                            cursor = edge.Cursor;
-                        }
+    //                if (customersData?.Customers != null)
+    //                {
+    //                    foreach (var edge in customersData.Customers.Edges)
+    //                    {
+    //                        customerList.Add(edge.Node);
+    //                        cursor = edge.Cursor;
+    //                    }
 
-                        hasNextPage = customersData.Customers.PageInfo.HasNextPage;
-                    }
-                    else
-                    {
-                        hasNextPage = false;
-                    }
-                }
-                else
-                {
-                    throw new Exception("Failed to fetch customers from shopify");
-                }
-                return customerList;
-            }
+    //                    hasNextPage = customersData.Customers.PageInfo.HasNextPage;
+    //                }
+    //                else
+    //                {
+    //                    hasNextPage = false;
+    //                }
+    //            }
+    //            else
+    //            {
+    //                throw new Exception("Failed to fetch customers from shopify");
+    //            }
+    //            return customerList;
+    //        }
         }
     
 
