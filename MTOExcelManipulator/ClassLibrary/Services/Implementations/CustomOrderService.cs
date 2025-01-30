@@ -5,6 +5,8 @@ using GraphQL.Client.Abstractions;
 using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.Newtonsoft;
 using Newtonsoft.Json;
+using ShopifySharp;
+using ShopifySharp.Filters;
 using System.Text;
 using static OrdersByCustomerResponse;
 
@@ -14,6 +16,8 @@ namespace ClassLibrary.Services.Implementations
     {
         private readonly IGraphQLClient _graphQLClient;
         private readonly ShopifySharp.OrderService _service;
+        private readonly ShopifySharp.ShopifyPaymentsService _paymentsService;
+        private readonly RateLimiter _limiter;
 
         public CustomOrderService(ShopifyAdminAPISettings settings)
         {
@@ -29,6 +33,8 @@ namespace ClassLibrary.Services.Implementations
 
             _graphQLClient = graphQLClient;
             _service = new ShopifySharp.OrderService(settings.StoreUrl, settings.AccessToken);
+            _paymentsService = new ShopifySharp.ShopifyPaymentsService(settings.StoreUrl, settings.AccessToken);
+            _limiter = new RateLimiter(4, TimeSpan.FromSeconds(10));
         }
 
         public async Task<List<OrderDetail>> GetOrdersByCustomerIdAsync(string customerGid)
@@ -66,39 +72,34 @@ namespace ClassLibrary.Services.Implementations
             return response.Data?.Customer?.Orders?.Edges.Select(e => e.Node).ToList() ?? new List<OrderDetail>();
         }
 
-        public async Task<OrderTransactionGQLResponse.OrderData> GetOrderTransactionsAsync(string orderId)
+        public async Task<List<ShopifyPaymentsPayout>> FetchAllPayoutsAsync()
         {
-            var query = new GraphQLHttpRequest
+            var payoutsList = new List<ShopifyPaymentsPayout>();
+            string? startingAfter = null;
+
+            while (true)
             {
-                Query = @"
-        query GetOrderTransactions($orderId: ID!) {
-            order(id: $orderId) {
-                id
-                name
-                createdAt
-                transactions {
-                    id
-                    amount
-                    gateway
-                    status
-                    createdAt
-                    kind
-                    processedAt
+                await _limiter.PerformAsync(async () =>
+                {
+      
+                    var tempPayoutsList = await _paymentsService.ListPayoutsAsync();
 
-                }
-            }
-        }",
-                Variables = new { orderId = $"gid://shopify/Order/{orderId}" }
-            };
+                    if (tempPayoutsList != null && tempPayoutsList.Items.Any())
+                    {
+                        payoutsList.AddRange(tempPayoutsList.Items);
+                        startingAfter = tempPayoutsList.Items.Last().Id.ToString();
+                    }
+                    else
+                    {
+                        startingAfter = null;
+                    }
+                });
 
-            var response = await _graphQLClient.SendQueryAsync<OrderTransactionGQLResponse>(query);
-
-            if (response.Errors != null && response.Errors.Any())
-            {
-                throw new Exception($"GraphQL errors: {string.Join(", ", response.Errors.Select(e => e.Message))}");
+                if (string.IsNullOrEmpty(startingAfter))
+                    break;
             }
 
-            return response.Data?.Order;
+            return payoutsList;
         }
 
         public async Task<PayoutTransactionGQLResponse> GetPayoutTransactionAsync(string payoutId)

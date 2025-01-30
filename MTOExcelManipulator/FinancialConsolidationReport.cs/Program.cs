@@ -19,9 +19,9 @@ namespace FinancialConsolidationReport.cs
             _customOrderService = new CustomOrderService(shopifySettings);
 
             //List<OrderTransaction> transactions = await _service.RunFinancialConsolidationReport();
-            OrderTransactionGQLResponse.OrderData order = await _customOrderService.GetOrderTransactionsAsync(6218826186902.ToString());
+            var payouts = await _customOrderService.FetchAllPayoutsAsync();
 
-            string json = JsonConvert.SerializeObject(order);
+            string json = JsonConvert.SerializeObject(payouts);
 
             Console.WriteLine(json);
             Console.ReadLine();
