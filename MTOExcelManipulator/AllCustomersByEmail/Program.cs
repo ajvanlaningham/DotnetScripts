@@ -20,16 +20,16 @@ namespace AllCustomersByEmail
 
             _customCustomerService = new CustomCustomerService(config.GetShopifySettings());
 
-            List<CustomerFetch> customers = await _customCustomerService.FetchAllCustomersAsync();
-            List<SalesforceCustomer> salesforceCustomers = new List<SalesforceCustomer>();
+            //List<CustomerFetch> customers = await _customCustomerService.FetchAllCustomersAsync();
+            //List<SalesforceCustomer> salesforceCustomers = new List<SalesforceCustomer>();
 
-            foreach (CustomerFetch customer in customers)
-            {
-                //SalesforceCustomer sCustomer = MapCustomerToSalesforceCustomer(customer);
-                //salesforceCustomers.Add(sCustomer);
-            }
+            //foreach (CustomerFetch customer in customers)
+            //{
+            //    //SalesforceCustomer sCustomer = MapCustomerToSalesforceCustomer(customer);
+            //    //salesforceCustomers.Add(sCustomer);
+            //}
             
-            _excelWriterService.WriteExcelFile("", salesforceCustomers);
+            //_excelWriterService.WriteExcelFile("", salesforceCustomers);
         }
 
         //private static SalesforceCustomer MapCustomerToSalesforceCustomer(CustomerFetch customer)

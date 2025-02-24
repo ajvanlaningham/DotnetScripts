@@ -20,6 +20,9 @@ namespace ClassLibrary.Services.Implementations
                     var attribute = prop.GetCustomAttribute<ExcelColumnAttribute>();
                     var columnName = attribute?.Name ?? prop.Name;
 
+                    Console.WriteLine($"Checking for column '{columnName}'...");
+                    Console.WriteLine($"Available keys: {string.Join(", ", dataRow.Keys.Select(k => $"'{k}'"))}");
+
                     if (dataRow.ContainsKey(columnName))
                     {
                         var value = dataRow[columnName];
@@ -27,12 +30,14 @@ namespace ClassLibrary.Services.Implementations
                         {
                             try
                             {
+                                //Console.WriteLine($"Column '{columnName}' found!");
                                 var targetType = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
                                 var safeValue = Convert.ChangeType(value, targetType);
                                 prop.SetValue(obj, safeValue);
                             }
                             catch (Exception ex)
                             {
+                                //Console.WriteLine($"Column '{columnName}' NOT found.");
                                 Console.WriteLine($"Error converting column '{columnName}' value '{value}' to type '{prop.PropertyType.Name}': {ex.Message}");
                             }
                         }
@@ -73,19 +78,23 @@ namespace ClassLibrary.Services.Implementations
             }
 
             var headerRow = new List<string>();
-            foreach (var cell in worksheet.Cells[1, 1, 1, worksheet.Dimension.End.Column])
+            for (int col = 1; col <= worksheet.Dimension.End.Column; col++)
             {
-                headerRow.Add(cell.Text);
+                var cell = worksheet.Cells[1, col];
+                headerRow.Add(cell.Text.Trim());
             }
 
             for (int rowNum = 2; rowNum <= worksheet.Dimension.End.Row; rowNum++)
             {
                 var row = new Dictionary<string, object>();
-                for (int col = 1; col < worksheet.Dimension.End.Column; col++)
+                for (int col = 1; col <= worksheet.Dimension.End.Column; col++)
                 {
-                    var header = headerRow[col - 1];
-                    var cell = worksheet.Cells[rowNum, col];
-                    row[header] = cell.Value;
+                    var header = headerRow.ElementAtOrDefault(col - 1);
+                    if (header != null)  // Check for null to avoid out-of-range exceptions
+                    {
+                        var cell = worksheet.Cells[rowNum, col];
+                        row[header] = cell?.Text; 
+                    }
                 }
                 dataRows.Add(row);
             }

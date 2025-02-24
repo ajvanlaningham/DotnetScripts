@@ -20,7 +20,8 @@ namespace PanelSkus
             products = products.Where(
                 p => p.Variants.ToList().Any() &&
                 p.Variants.FirstOrDefault().SKU != null &&
-                p.Variants.FirstOrDefault().SKU.Contains("panel", StringComparison.OrdinalIgnoreCase))
+                p.Variants.FirstOrDefault().SKU.Contains("panel", StringComparison.OrdinalIgnoreCase) | 
+                p.Variants.FirstOrDefault().SKU.Contains("SB", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             Console.WriteLine(products.Count);
@@ -33,7 +34,9 @@ namespace PanelSkus
                 {
                     SKU = product.Variants.FirstOrDefault().SKU.Split('-').First(),
                     Title = product.Title,
-                    ShopifyIDNuber =  product.Id.Value.ToString()
+                    ShopifyIDNumber =  product.Id.Value.ToString(),
+                    Handle = product.Handle,
+                    URL = $"https://powdercoatings.ppg.com/products/{product.Handle}"
                 };
                 panels.Add(panel);
             }
@@ -47,6 +50,8 @@ namespace PanelSkus
     {
         public string SKU { get; set; }
         public string Title { get; set; }
-        public string ShopifyIDNuber { get; set; }
+        public string Handle { get; set; }
+        public string URL { get; set; }
+        public string ShopifyIDNumber { get; set; }
     }
 }

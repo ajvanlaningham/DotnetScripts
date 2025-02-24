@@ -39,7 +39,7 @@ namespace ClassLibrary.Services.Implementations
                     var prop = properties[col - 1];
                     var value = prop.GetValue(item, null);
 
-                    worksheet.Cells[row, col].Value = value;
+                    worksheet.Cells[row, col].Value = value ?? "null";
                 }
                 row++;
             }
