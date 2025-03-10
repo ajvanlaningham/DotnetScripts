@@ -20,6 +20,15 @@ namespace AreTheyAllArchived
 
             List<BasePriceObj> bxcs = _excelReaderService.ReadExcelFile(filePath);
 
+            List<string> active = new List<string>();
+            List<string> archived = new List<string>();
+
+            foreach (BasePriceObj bx in bxcs)
+            {
+                bx.Item = bx.Item.Split('/').First();
+                Product product  = products.Find(p =>)
+            }
+
 
         }
 

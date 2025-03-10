@@ -55,74 +55,68 @@ namespace ClassLibrary.Services.Implementations
             });
         }
 
-        public async Task FetchAllCustomersAsync()
+        public async Task<List<Classes.GQLObjects.Customer>> FetchAllCustomersAsync()
         {
-            throw new NotImplementedException(); 
-    //        var customerList = new List<CustomerFetch>();
-    //        string? cursor = null; // Pagination cursor
-    //        const string query = @"
-    //    query ($cursor: String) {
-    //        customers(first: 250, after: $cursor) {
-    //            edges {
-    //                cursor
-    //                node {
-    //                    id
-    //                    email
-    //                    firstName
-    //                    lastName
-    //                    phone
-    //                    createdAt
-    //                    updatedAt
-    //                    tags
-    //                    addresses {
-    //                        address1
-    //                        address2
-    //                        city
-    //                        province
-    //                        country
-    //                        zip
-    //                    }
-    //                }
-    //            }
-    //            pageInfo {
-    //                hasNextPage
-    //            }
-    //        }
-    //    }
-    //";
+            var allCustomers = new List<Classes.GQLObjects.Customer>();
+            string? cursor = null;
+            bool hasMore = true;
 
-    //        bool hasNextPage = true;
+            while (hasMore)
+            {
+                var query = new GraphQLHttpRequest
+                {
+                    Query = @"
+                query($cursor: String) {
+                  customers(first: 250, after: $cursor) {
+                    edges {
+                      cursor
+                      node {
+                        id
+                        email
+                        firstName
+                        lastName
+                        multipassIdentifier
+                        lastOrder {
+                          id
+                        }
+                        note
+                        phone
+                        state
+                        tags
+                        metafields(first: 10) {
+                          edges {
+                            node {
+                              id
+                              key
+                              value
+                              namespace
+                              description
+                            }
+                          }
+                        }
+                      }
+                    }
+                    pageInfo {
+                      hasNextPage
+                    }
+                  }
+                }",
+                    Variables = new { cursor }
+                };
 
-    //        while (hasNextPage)
-    //        {
-    //            var variables = new { cursor };
-    //            var response = await _graphQLClient.SendQueryAsync(query, variables);
+                var response = await _graphQLClient.SendQueryAsync<CustomerResponseData>(query);
+                var customers = response.Data.Customers.Edges.Select(edge => edge.Node).ToList();
 
-    //            if (response != null && response.Data != null)
-    //            {
-    //                var customersData = JsonSerializer.Deserialize<GraphQLFetchCustomersResponse>(response.Data.ToString());
+                allCustomers.AddRange(customers);
+                hasMore = response.Data.Customers.PageInfo.HasNextPage;
 
-    //                if (customersData?.Customers != null)
-    //                {
-    //                    foreach (var edge in customersData.Customers.Edges)
-    //                    {
-    //                        customerList.Add(edge.Node);
-    //                        cursor = edge.Cursor;
-    //                    }
+                if (hasMore)
+                {
+                    cursor = response.Data.Customers.Edges.Last().Cursor;
+                }
+            }
 
-    //                    hasNextPage = customersData.Customers.PageInfo.HasNextPage;
-    //                }
-    //                else
-    //                {
-    //                    hasNextPage = false;
-    //                }
-    //            }
-    //            else
-    //            {
-    //                throw new Exception("Failed to fetch customers from shopify");
-    //            }
-    //            return customerList;
-    //        }
+            return allCustomers;
         }
     
 

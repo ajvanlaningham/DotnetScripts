@@ -4,10 +4,7 @@ using ClassLibrary.Services.Interfaces;
 using GraphQL.Client.Abstractions;
 using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.Newtonsoft;
-using Newtonsoft.Json;
 using ShopifySharp;
-using ShopifySharp.Filters;
-using System.Text;
 using static OrdersByCustomerResponse;
 
 namespace ClassLibrary.Services.Implementations
@@ -131,6 +128,12 @@ namespace ClassLibrary.Services.Implementations
             throw new NotImplementedException();
 
         }
+
+        public async Task<string> FetchOrderJsonStringByIDAsync(long orderID) =>
+            Newtonsoft.Json.JsonConvert.SerializeObject(await _service.GetAsync(orderID));
+
+        public async Task<ShopifySharp.Order> FetchOrderAsync(long orderID) =>
+            await _service.GetAsync(orderID);
 
         private static string EnsureProtocol(string url)
         {
