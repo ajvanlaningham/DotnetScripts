@@ -55,6 +55,57 @@ namespace ClassLibrary.Services.Implementations
             });
         }
 
+        public async Task UpdateCustomerTagsUsingGQLAsync(string customerGQLId, string tag)
+        {
+            var customer = await GetCustomerByIdAsync(customerGQLId);
+
+            List<string> updatedTags = customer.Tags != null
+                ? new List<string>(customer.Tags)
+                : new List<string>();
+
+            if (!updatedTags.Any(t => t.Equals(tag, StringComparison.OrdinalIgnoreCase)))
+            {
+                updatedTags.Add(tag);
+            }
+
+            var mutation = new GraphQLHttpRequest
+            {
+                Query = @"
+            mutation updateCustomerTags($input: CustomerInput!) {
+                customerUpdate(input: $input) {
+                    customer {
+                        id
+                        tags
+                    }
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }",
+                Variables = new
+                {
+                    input = new
+                    {
+                        id = customerGQLId,
+                        tags = updatedTags
+                    }
+                }
+            };
+
+            var response = await _graphQLClient.SendMutationAsync<CustomerUpdateResponse>(mutation);
+
+            if (response.Data.CustomerUpdate.UserErrors.Count > 0)
+            {
+                Console.WriteLine($"Error updating customer tags: {string.Join(", ", response.Data.CustomerUpdate.UserErrors.Select(e => e.Message))}");
+            }
+            else
+            {
+                Console.WriteLine($"Updated customer tags for {customer.Email}");
+            }
+        }
+
+
         public async Task<List<Classes.GQLObjects.Customer>> FetchAllCustomersAsync()
         {
             var allCustomers = new List<Classes.GQLObjects.Customer>();
@@ -122,9 +173,10 @@ namespace ClassLibrary.Services.Implementations
 
         public async Task<Classes.GQLObjects.Customer> GetCustomerByIdAsync(string customerId)
         {
-            long.TryParse(customerId, out long numericId);
+            string gid = customerId.StartsWith("gid://shopify/Customer/")
+                ? customerId
+                : $"gid://shopify/Customer/{customerId}";
 
-            string gid = $"gid://shopify/Customer/{numericId}";
             var query = new GraphQLHttpRequest
             {
                 Query = @"
