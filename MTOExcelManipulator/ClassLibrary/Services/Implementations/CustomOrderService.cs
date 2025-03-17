@@ -5,6 +5,7 @@ using GraphQL.Client.Abstractions;
 using GraphQL.Client.Http;
 using GraphQL.Client.Serializer.Newtonsoft;
 using ShopifySharp;
+using static ClassLibrary.Classes.GQLObjects.OrderByIDResponse;
 using static OrdersByCustomerResponse;
 
 namespace ClassLibrary.Services.Implementations
@@ -134,6 +135,126 @@ namespace ClassLibrary.Services.Implementations
 
         public async Task<ShopifySharp.Order> FetchOrderAsync(long orderID) =>
             await _service.GetAsync(orderID);
+
+        public async Task<OrderNode> GetOrderByIdAsync(string orderId, CancellationToken cancellationToken = default)
+        {
+            var query = new GraphQLHttpRequest
+            {
+                Query = @"
+        query getOrderById($id: ID!) {
+          order(id: $id) {
+            id
+            name
+            poNumber
+            note
+            createdAt
+            tags
+            billingAddress {
+              company
+            }
+            customer {
+              id
+              firstName
+              lastName
+              email
+              phone
+              tags
+            }
+            shippingAddress {
+              firstName
+              company
+              lastName
+              province
+              countryCodeV2
+              address1
+              address2
+              city
+              country
+              zip
+            }
+            shippingLines(first: 10) {
+              edges {
+                node {
+                  title
+                  price
+                  code
+                }
+              }
+            }
+            lineItems(first: 250) {
+              edges {
+                node {
+                  id
+                  fulfillableQuantity
+                  fulfillmentStatus
+                  name
+                  originalUnitPriceSet {
+                    shopMoney {
+                      amount
+                      currencyCode
+                    }
+                    presentmentMoney {
+                      amount
+                      currencyCode
+                    }
+                  }
+                  product {
+                    id
+                  }
+                  quantity
+                  requiresShipping
+                  sku
+                  taxable
+                  title
+                  totalDiscount
+                  totalDiscountSet {
+                    shopMoney {
+                      amount
+                      currencyCode
+                    }
+                    presentmentMoney {
+                      amount
+                      currencyCode
+                    }
+                  }
+                  variantTitle
+                  vendor
+                  taxLines {
+                    title
+                    price
+                    rate
+                  }
+                  discountAllocations {
+                    allocatedAmount {
+                      amount
+                      currencyCode
+                    }
+                  }
+                }
+              }
+            }
+            paymentGatewayNames
+            fulfillmentOrders(first: 10) {
+                  edges {
+                    node {
+                      id
+                      assignedLocation {
+                        location {
+                          id
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+            }
+          }",
+                Variables = new { id = orderId }
+            };
+
+            var response = await _graphQLClient.SendQueryAsync<OrderByIdQueryResponse>(query, cancellationToken);
+            return response.Data.Order;
+        }
 
         private static string EnsureProtocol(string url)
         {
