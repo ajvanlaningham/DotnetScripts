@@ -152,13 +152,24 @@ namespace ClassLibrary.Services.Implementations
             billingAddress {
               company
             }
-            customer {
-              id
-              firstName
-              lastName
-              email
-              phone
-              tags
+            purchasingEntity {
+              __typename
+              ... on PurchasingCompany {
+                location {
+                  id
+                  metafield(namespace: ""custom"", key: ""shiptoid"") {
+                    value
+                  }
+                }
+              }
+              ... on Customer {
+                id
+                firstName
+                lastName
+                email
+                phone
+                tags
+              }
             }
             shippingAddress {
               firstName

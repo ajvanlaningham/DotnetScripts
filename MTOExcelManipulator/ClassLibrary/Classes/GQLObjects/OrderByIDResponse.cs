@@ -1,13 +1,13 @@
-﻿using ShopifySharp;
+﻿using Newtonsoft.Json;
+using ShopifySharp;
 using ShopifySharp.GraphQL;
-using static ClassLibrary.Classes.GQLObjects.OrderByIDResponse;
-
+using System;
+using System.Collections.Generic;
 
 namespace ClassLibrary.Classes.GQLObjects
 {
     public class OrderByIDResponse
     {
-
         public class OrderByIdQueryResponse
         {
             public OrderNode Order { get; set; }
@@ -33,13 +33,15 @@ namespace ClassLibrary.Classes.GQLObjects
             public string Note { get; set; }
             public DateTime CreatedAt { get; set; }
             public string[] Tags { get; set; }
-            public OrderCustomer Customer { get; set; }
             public Address ShippingAddress { get; set; }
             public OrderBillingAddress BillingAddress { get; set; }
             public ShippingLineConnection ShippingLines { get; set; }
             public LineItemConnection LineItems { get; set; }
             public string[] PaymentGatewayNames { get; set; }
             public List<FullfillmentOrderNode> Fulfillments { get; set; }
+
+            // New: purchasingEntity union field.
+            public PurchasingEntity PurchasingEntity { get; set; }
         }
 
         public class FullfillmentOrderEdge
@@ -55,7 +57,8 @@ namespace ClassLibrary.Classes.GQLObjects
 
         public class AssignedLocation
         {
-            public ShopifySharp.GraphQL.Location Location { get; set; } 
+            // This uses the ShopifySharp provided Location type.
+            public ShopifySharp.GraphQL.Location Location { get; set; }
         }
 
         public class ShippingLineConnection
@@ -79,17 +82,6 @@ namespace ClassLibrary.Classes.GQLObjects
         {
             public string Company { get; set; }
         }
-
-        public class OrderCustomer
-        {
-            public string Id { get; set; }
-            public string FirstName { get; set; }
-            public string LastName { get; set; }
-            public string Email { get; set; }
-            public string Phone { get; set; }
-            public string[] Tags { get; set; }
-        }
-
 
         public class Address
         {
@@ -164,6 +156,38 @@ namespace ClassLibrary.Classes.GQLObjects
         public class DiscountAllocation
         {
             public Money AllocatedAmount { get; set; }
+        }
+
+        [JsonConverter(typeof(PurchasingEntityHelper))]
+        public abstract class PurchasingEntity
+        {
+            public string __typename { get; set; }
+        }
+
+        public class PurchasingCompanyEntity : PurchasingEntity
+        {
+            public CompanyLocation Location { get; set; }
+        }
+
+        public class PurchasingCustomerEntity : PurchasingEntity
+        {
+            public string Id { get; set; }
+            public string FirstName { get; set; }
+            public string LastName { get; set; }
+            public string Email { get; set; }
+            public string Phone { get; set; }
+            public string[] Tags { get; set; }
+        }
+
+        public class CompanyLocation
+        {
+            public string Id { get; set; }
+            public Metafield Metafield { get; set; }
+        }
+
+        public class Metafield
+        {
+            public string Value { get; set; }
         }
     }
 }
