@@ -55,6 +55,45 @@ namespace ClassLibrary.Services.Implementations
             return MapDataToObjects<T>(dataRows);
         }
 
+        public List<SKUTags> ReadSKUTags(string filePath)
+        {
+            var result = new List<SKUTags>();
+
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+            using (var package = new ExcelPackage(new FileInfo(filePath)))
+            {
+                var worksheet = package.Workbook.Worksheets.First(); 
+                var rowCount = worksheet.Dimension.End.Row;
+                var colCount = worksheet.Dimension.End.Column;
+
+                for (int row = 2; row <= rowCount; row++)
+                {
+                    var sku = worksheet.Cells[row, 1].Text?.Trim(); // Column A (1)
+                    var tags = new List<string>();
+
+                    // Columns B (2) to AA (27)
+                    for (int col = 2; col <= 27; col++)
+                    {
+                        var tag = worksheet.Cells[row, col].Text?.Trim();
+                        if (!string.IsNullOrEmpty(tag))
+                        {
+                            tags.Add(tag);
+                        }
+                    }
+
+                    result.Add(new SKUTags
+                    {
+                        SKU = sku,
+                        Tags = string.Join(", ", tags)
+                    });
+                }
+            }
+
+            return result; 
+        }
+
+
         private IEnumerable<IDictionary<string, object>> ReadExcelToDataRows(string filePath, string sheetName)
         {
             var dataRows = new List<IDictionary<string, object>>();
@@ -107,6 +146,13 @@ namespace ClassLibrary.Services.Implementations
         {
             public string Name { get; set; }
             public ExcelColumnAttribute(string name) => Name = name;
+        }
+
+
+        public class SKUTags
+        {
+            public string SKU { get; set; }
+            public string Tags { get; set; }
         }
 
     }
